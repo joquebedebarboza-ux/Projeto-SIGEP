@@ -1,0 +1,546 @@
+CREATE DATABASE sigep_pizzaria;
+USE sigep_pizzaria;
+
+-- =====================================
+-- ADMINISTRATIVO
+-- =====================================
+
+CREATE TABLE Cargos (
+    id_cargo INT AUTO_INCREMENT PRIMARY KEY COMMENT 'Identificador do cargo',
+    nome_cargo VARCHAR(50) NOT NULL COMMENT 'Nome do cargo (Gerente, Garçom, etc.)'
+) COMMENT='Tabela de cargos dos funcionários';
+
+CREATE TABLE Funcionarios (
+    id_funcionario INT AUTO_INCREMENT PRIMARY KEY COMMENT 'Identificador do funcionário',
+    nome VARCHAR(100) NOT NULL COMMENT 'Nome completo do funcionário',
+    usuario VARCHAR(50) UNIQUE COMMENT 'Login do sistema',
+    senha VARCHAR(255) COMMENT 'Senha de acesso',
+    id_cargo INT COMMENT 'Cargo do funcionário',
+    turno ENUM('Manhã','Tarde','Noite') COMMENT 'Turno de trabalho',
+    FOREIGN KEY (id_cargo) REFERENCES Cargos(id_cargo)
+) COMMENT='Tabela de funcionários da pizzaria';
+
+-- =====================================
+-- DISPOSITIVOS
+-- =====================================
+
+CREATE TABLE Dispositivos (
+    id_dispositivo INT AUTO_INCREMENT PRIMARY KEY COMMENT 'Identificador do dispositivo',
+    tipo ENUM(
+        'TV Cozinha',
+        'Painel Expedição',
+        'TV Expedição',
+        'Computador',
+        'Maquininha Cartão',
+        'Celular',
+        'Totem'
+    ) COMMENT 'Tipo do dispositivo utilizado no sistema',
+    localizacao VARCHAR(100) COMMENT 'Local onde o dispositivo está',
+    status ENUM('Ativo','Inativo') DEFAULT 'Ativo' COMMENT 'Status do dispositivo'
+) COMMENT='Dispositivos utilizados no funcionamento da pizzaria';
+
+-- =====================================
+-- CLIENTES
+-- =====================================
+
+CREATE TABLE Clientes (
+    id_cliente INT AUTO_INCREMENT PRIMARY KEY COMMENT 'Identificador do cliente',
+    nome VARCHAR(100) COMMENT 'Nome do cliente',
+    telefone VARCHAR(20) COMMENT 'Telefone para contato',
+    email VARCHAR(100) COMMENT 'Email do cliente',
+    endereco VARCHAR(200) COMMENT 'Endereço para entrega'
+) COMMENT='Cadastro de clientes';
+
+-- =====================================
+-- MESAS
+-- =====================================
+
+CREATE TABLE Mesas (
+    id_mesa INT AUTO_INCREMENT PRIMARY KEY COMMENT 'Identificador da mesa',
+    numero_mesa INT COMMENT 'Número físico da mesa',
+    andar ENUM('1º','2º') COMMENT 'Andar da pizzaria',
+    status ENUM('Disponível','Indisponível','Reservada') COMMENT 'Situação da mesa'
+) COMMENT='Mesas físicas da pizzaria';
+
+-- =====================================
+-- RESERVAS
+-- =====================================
+
+CREATE TABLE Reservas (
+    id_reserva INT AUTO_INCREMENT PRIMARY KEY COMMENT 'Identificador da reserva',
+    id_cliente INT COMMENT 'Cliente que fez a reserva',
+    id_mesa INT COMMENT 'Mesa reservada',
+    data_reserva DATE COMMENT 'Data da reserva',
+    hora_reserva TIME COMMENT 'Horário da reserva',
+    telefone_reserva VARCHAR(20) COMMENT 'Telefone de confirmação',
+    taxa_reserva DECIMAL(10,2) COMMENT 'Valor da taxa de reserva',
+    status ENUM('Ativa','Cancelada','Reagendada') COMMENT 'Status da reserva',
+    observacao VARCHAR(200) COMMENT 'Observações da reserva',
+    FOREIGN KEY (id_cliente) REFERENCES Clientes(id_cliente),
+    FOREIGN KEY (id_mesa) REFERENCES Mesas(id_mesa)
+) COMMENT='Controle de reservas de mesas';
+
+-- =====================================
+-- PRODUTOS
+-- =====================================
+
+CREATE TABLE Produtos (
+    id_produto INT AUTO_INCREMENT PRIMARY KEY COMMENT 'Identificador do produto',
+    nome_produto VARCHAR(100) COMMENT 'Nome do produto',
+    categoria VARCHAR(50) COMMENT 'Categoria (Pizza, Bebida, etc.)',
+    tamanho ENUM('Broto','Média','Grande','Família') COMMENT 'Tamanho do produto',
+    preco DECIMAL(10,2) COMMENT 'Preço do produto'
+) COMMENT='Cardápio da pizzaria';
+
+-- =====================================
+-- INSUMOS / ESTOQUE
+-- =====================================
+
+CREATE TABLE Insumos (
+    id_insumo INT AUTO_INCREMENT PRIMARY KEY COMMENT 'Identificador do insumo',
+    nome_insumo VARCHAR(100) COMMENT 'Nome do insumo',
+    unidade ENUM('ml','L','g','kg','unidade') COMMENT 'Unidade de medida'
+) COMMENT='Matéria-prima utilizada na produção';
+
+CREATE TABLE Estoque (
+    id_estoque INT AUTO_INCREMENT PRIMARY KEY COMMENT 'Identificador do estoque',
+    id_insumo INT COMMENT 'Insumo armazenado',
+    quantidade DECIMAL(10,2) COMMENT 'Quantidade disponível',
+    data_entrada DATE COMMENT 'Data de entrada no estoque',
+    data_saida DATE COMMENT 'Data de saída do estoque',
+    FOREIGN KEY (id_insumo) REFERENCES Insumos(id_insumo)
+) COMMENT='Controle de estoque de insumos';
+
+-- =====================================
+-- PEDIDOS
+-- =====================================
+
+CREATE TABLE Pedidos (
+    id_pedido INT AUTO_INCREMENT PRIMARY KEY COMMENT 'Identificador do pedido',
+    id_cliente INT COMMENT 'Cliente que realizou o pedido',
+    id_mesa INT NULL COMMENT 'Mesa (se presencial)',
+    tipo ENUM('Presencial','Delivery') COMMENT 'Tipo do pedido',
+    
+    origem ENUM(
+        'WhatsApp',
+        'iFood',
+        'Rappi',
+        'Uber Eats',
+        'Site',
+        'Balcão',
+        'Totem'
+    ) COMMENT 'Origem do pedido',
+    
+    status ENUM(
+        'Pedido recebido',
+        'Em fila',
+        'Em preparo',
+        'No forno',
+        'Finalizado',
+        'Pronto',
+        'Saiu para entrega',
+        'Servindo mesa'
+    ) COMMENT 'Status do pedido',
+    
+    data_hora DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT 'Data e hora do pedido',
+    
+    FOREIGN KEY (id_cliente) REFERENCES Clientes(id_cliente),
+    FOREIGN KEY (id_mesa) REFERENCES Mesas(id_mesa)
+) COMMENT='Pedidos realizados na pizzaria';
+
+-- =====================================
+-- ITENS DO PEDIDO
+-- =====================================
+
+CREATE TABLE Itens_Pedido (
+    id_item INT AUTO_INCREMENT PRIMARY KEY COMMENT 'Item do pedido',
+    id_pedido INT COMMENT 'Pedido relacionado',
+    id_produto INT COMMENT 'Produto do pedido',
+    quantidade INT COMMENT 'Quantidade do item',
+    observacao VARCHAR(200) COMMENT 'Observações do cliente',
+    FOREIGN KEY (id_pedido) REFERENCES Pedidos(id_pedido),
+    FOREIGN KEY (id_produto) REFERENCES Produtos(id_produto)
+) COMMENT='Itens que compõem cada pedido';
+
+-- =====================================
+-- PAGAMENTOS
+-- =====================================
+
+CREATE TABLE Pagamentos (
+    id_pagamento INT AUTO_INCREMENT PRIMARY KEY COMMENT 'Identificador do pagamento',
+    id_pedido INT COMMENT 'Pedido pago',
+    tipo_pagamento ENUM(
+        'Dinheiro',
+        'Cartão Crédito',
+        'Cartão Débito',
+        'Pix',
+        'Carteira Digital',
+        'iFood',
+        'Rappi',
+        'Uber Eats'
+    ) COMMENT 'Forma de pagamento',
+    valor DECIMAL(10,2) COMMENT 'Valor pago',
+    status ENUM('Pago','Pendente') COMMENT 'Situação do pagamento',
+    FOREIGN KEY (id_pedido) REFERENCES Pedidos(id_pedido)
+) COMMENT='Pagamentos dos pedidos';
+
+-- =====================================
+-- ENTREGAS
+-- =====================================
+
+CREATE TABLE Entregas (
+    id_entrega INT AUTO_INCREMENT PRIMARY KEY COMMENT 'Identificador da entrega',
+    id_pedido INT COMMENT 'Pedido entregue',
+    endereco_entrega VARCHAR(200) COMMENT 'Endereço da entrega',
+    status ENUM(
+        'Pedido recebido',
+        'Em preparo',
+        'Saiu para entrega',
+        'Entregue'
+    ) COMMENT 'Status da entrega',
+    FOREIGN KEY (id_pedido) REFERENCES Pedidos(id_pedido)
+) COMMENT='Controle de entregas';
+
+USE sigep_pizzaria;
+
+-- =====================================
+-- CARGOS
+-- =====================================
+INSERT INTO Cargos (nome_cargo) VALUES
+('Gerente'),('Pizzaiolo'),('Auxiliar Cozinha'),('Caixa'),
+('Garçom'),('Entregador'),('Limpeza'),('Supervisor'),
+('Atendente'),('Estoquista');
+
+-- =====================================
+-- FUNCIONÁRIOS (12)
+-- =====================================
+INSERT INTO Funcionarios (nome, usuario, senha, id_cargo, turno) VALUES
+('Claudio','gerente','123',1,'Manhã'),
+('Marcos','p1','123',2,'Noite'),
+('André','p2','123',2,'Noite'),
+('Ana','c1','123',3,'Manhã'),
+('Bruno','c2','123',3,'Tarde'),
+('Carla','cx1','123',4,'Tarde'),
+('Renata','cx2','123',4,'Noite'),
+('José','g1','123',5,'Noite'),
+('Lucas','g2','123',5,'Tarde'),
+('Ruan','e1','123',6,'Noite'),
+('Sonia','l1','123',7,'Manhã'),
+('Lucas2','s1','123',8,'Manhã');
+
+-- =====================================
+-- DISPOSITIVOS
+-- =====================================
+INSERT INTO Dispositivos (tipo, localizacao, status) VALUES
+('TV Cozinha','Cozinha 1','Ativo'),
+('TV Cozinha','Cozinha 2','Ativo'),
+('Painel Expedição','Expedição','Ativo'),
+('Maquininha Cartão','Caixa','Ativo'),
+('Maquininha Cartão','Caixa','Ativo'),
+('Celular','Salão','Ativo'),
+('Celular','Salão','Ativo'),
+('Celular','Delivery','Ativo'),
+('Celular','Delivery','Ativo'),
+('Totem','Entrada','Ativo'),
+('Totem','Entrada','Ativo'),
+('TV Expedição','Bar','Ativo'),
+('Maquininha Cartão','Salão VIP','Ativo'),
+('Computador','Administração','Ativo'),
+('Celular','Gestão','Ativo'),
+('TV Expedição','Salão','Ativo'),
+('Celular','Cozinha','Ativo'),
+('Maquininha Cartão','Reserva','Ativo'),
+('Celular','Backup','Ativo'),
+('Totem','Entrada Externa','Ativo');
+
+-- =====================================
+-- CLIENTES (20)
+-- =====================================
+INSERT INTO Clientes (nome, telefone, email, endereco) VALUES
+('Cliente 1','8191','c1@email.com','Rua A'),
+('Cliente 2','8192','c2@email.com','Rua B'),
+('Cliente 3','8193','c3@email.com','Rua C'),
+('Cliente 4','8194','c4@email.com','Rua D'),
+('Cliente 5','8195','c5@email.com','Rua E'),
+('Cliente 6','8196','c6@email.com','Rua F'),
+('Cliente 7','8197','c7@email.com','Rua G'),
+('Cliente 8','8198','c8@email.com','Rua H'),
+('Cliente 9','8199','c9@email.com','Rua I'),
+('Cliente 10','8200','c10@email.com','Rua J'),
+('Cliente 11','8201','c11@email.com','Rua K'),
+('Cliente 12','8202','c12@email.com','Rua L'),
+('Cliente 13','8203','c13@email.com','Rua M'),
+('Cliente 14','8204','c14@email.com','Rua N'),
+('Cliente 15','8205','c15@email.com','Rua O'),
+('Cliente 16','8206','c16@email.com','Rua P'),
+('Cliente 17','8207','c17@email.com','Rua Q'),
+('Cliente 18','8208','c18@email.com','Rua R'),
+('Cliente 19','8209','c19@email.com','Rua S'),
+('Cliente 20','8210','c20@email.com','Rua T');
+
+-- =====================================
+-- MESAS (10)
+-- =====================================
+INSERT INTO Mesas (numero_mesa, andar, status) VALUES
+(1,'1º','Disponível'),(2,'1º','Reservada'),(3,'1º','Disponível'),
+(4,'1º','Indisponível'),(5,'1º','Reservada'),
+(6,'2º','Disponível'),(7,'2º','Reservada'),
+(8,'2º','Disponível'),(9,'2º','Indisponível'),(10,'2º','Disponível');
+
+-- =====================================
+-- PRODUTOS
+-- =====================================
+INSERT INTO Produtos (nome_produto,categoria,tamanho,preco) VALUES
+('Calabresa','Pizza','Grande',45),
+('Mussarela','Pizza','Grande',40),
+('Portuguesa','Pizza','Grande',50),
+('Frango Catupiry','Pizza','Grande',48),
+('Chocolate','Pizza','Broto',30),
+('Romeu e Julieta','Pizza','Broto',28),
+('Pepperoni','Pizza','Grande',55),
+('4 Queijos','Pizza','Grande',52),
+('Vegetariana','Pizza','Grande',49),
+('Lombo','Pizza','Grande',53),
+('Refrigerante','Bebida','Grande',12),
+('Suco','Bebida','Média',10),
+('Água','Bebida','Broto',5),
+('Cerveja','Bebida','Grande',15),
+('Batata Frita','Acompanhamento','Média',18),
+('Nuggets','Acompanhamento','Média',20),
+('Pudim','Sobremesa','Broto',12),
+('Brownie','Sobremesa','Broto',15),
+('Açaí','Sobremesa','Média',18),
+('Borda Recheada','Adicional','Broto',8);
+
+-- =====================================
+-- INSUMOS
+-- =====================================
+INSERT INTO Insumos (nome_insumo, unidade) VALUES
+('Calabresa','kg'),('Mussarela','kg'),('Presunto','kg'),('Frango','kg'),
+('Chocolate','kg'),('Goiabada','kg'),('Pepperoni','kg'),('Queijo','kg'),
+('Vegetais','kg'),('Lombo','kg'),('Refrigerante','L'),('Suco','L'),
+('Água','unidade'),('Cerveja','unidade'),('Batata','kg'),('Nuggets','kg'),
+('Pudim','kg'),('Brownie','kg'),('Açaí','kg'),('Massa','kg');
+
+-- =====================================
+-- ESTOQUE
+-- =====================================
+INSERT INTO Estoque (id_insumo, quantidade, data_entrada, data_saida) VALUES
+(1,20,'2026-05-01',NULL),(2,30,'2026-05-01',NULL),
+(3,15,'2026-05-01',NULL),(4,25,'2026-05-01',NULL),
+(5,10,'2026-05-01',NULL),(6,12,'2026-05-01',NULL),
+(7,18,'2026-05-01',NULL),(8,20,'2026-05-01',NULL),
+(9,15,'2026-05-01',NULL),(10,14,'2026-05-01',NULL),
+(11,40,'2026-05-01',NULL),(12,20,'2026-05-01',NULL),
+(13,50,'2026-05-01',NULL),(14,60,'2026-05-01',NULL),
+(15,10,'2026-05-01',NULL),(16,20,'2026-05-01',NULL),
+(17,12,'2026-05-01',NULL),(18,10,'2026-05-01',NULL),
+(19,15,'2026-05-01',NULL),(20,50,'2026-05-01',NULL);
+
+-- =====================================
+-- PEDIDOS (20)
+-- =====================================
+INSERT INTO Pedidos (id_cliente,id_mesa,tipo,origem,status) VALUES
+(1,1,'Presencial','Totem','Finalizado'),
+(2,2,'Presencial','Balcão','Em preparo'),
+(3,3,'Presencial','Site','Servindo mesa'),
+(4,4,'Delivery','iFood','Saiu para entrega'),
+(5,5,'Delivery','Uber Eats','Finalizado'),
+(6,6,'Delivery','Rappi','Em preparo'),
+(7,7,'Presencial','Totem','Finalizado'),
+(8,8,'Presencial','Balcão','Servindo mesa'),
+(9,9,'Presencial','Site','Em preparo'),
+(10,10,'Delivery','iFood','Saiu para entrega'),
+(11,1,'Presencial','Totem','Finalizado'),
+(12,2,'Presencial','Balcão','Em preparo'),
+(13,3,'Delivery','iFood','Saiu para entrega'),
+(14,4,'Delivery','Rappi','Em preparo'),
+(15,5,'Presencial','Site','Finalizado'),
+(16,6,'Delivery','Uber Eats','Saiu para entrega'),
+(17,7,'Presencial','Totem','Servindo mesa'),
+(18,8,'Presencial','Balcão','Finalizado'),
+(19,9,'Delivery','iFood','Em preparo'),
+(20,10,'Delivery','Rappi','Finalizado');
+
+-- =====================================
+-- ITENS PEDIDO (20)
+-- =====================================
+INSERT INTO Itens_Pedido (id_pedido,id_produto,quantidade,observacao) VALUES
+(1,1,1,'Sem cebola'),(2,2,1,'Borda recheada'),
+(3,3,1,'Extra queijo'),(4,4,1,'Sem tomate'),
+(5,5,1,'Bem assada'),(6,6,1,'Pouco sal'),
+(7,7,1,'Sem orégano'),(8,8,1,'Molho extra'),
+(9,9,1,'Sem azeite'),(10,10,1,'Com gelo'),
+(11,1,2,'Família'),(12,2,1,'Normal'),
+(13,3,1,'Sem borda'),(14,4,1,'Extra frango'),
+(15,5,1,'Doce leve'),(16,6,1,'Sem açúcar'),
+(17,7,1,'Apimentada'),(18,8,1,'Sem queijo'),
+(19,9,1,'Vegana'),(20,10,1,'Caprichada');
+
+-- =====================================
+-- PAGAMENTOS
+-- =====================================
+INSERT INTO Pagamentos (id_pedido,tipo_pagamento,valor,status) VALUES
+(1,'Dinheiro',45,'Pago'),(2,'Pix',40,'Pago'),
+(3,'Cartão Crédito',50,'Pago'),(4,'Cartão Débito',48,'Pago'),
+(5,'iFood',30,'Pago'),(6,'Uber Eats',28,'Pago'),
+(7,'Rappi',32,'Pago'),(8,'Carteira Digital',25,'Pago'),
+(9,'Pix',20,'Pago'),(10,'Cartão Crédito',55,'Pago'),
+(11,'Dinheiro',45,'Pago'),(12,'Pix',40,'Pago'),
+(13,'Cartão Débito',38,'Pago'),(14,'iFood',60,'Pago'),
+(15,'Uber Eats',42,'Pago'),(16,'Rappi',35,'Pago'),
+(17,'Pix',25,'Pago'),(18,'Cartão Crédito',50,'Pago'),
+(19,'Dinheiro',30,'Pago'),(20,'Carteira Digital',22,'Pago');
+
+-- =====================================
+-- ENTREGAS (20)
+-- =====================================
+INSERT INTO Entregas (id_pedido,endereco_entrega,status) VALUES
+(1,'Rua A','Entregue'),
+(2,'Rua B','Saiu para entrega'),
+(3,'Rua C','Em preparo'),
+(4,'Rua D','Entregue'),
+(5,'Rua E','Saiu para entrega'),
+(6,'Rua F','Em preparo'),
+(7,'Rua G','Entregue'),
+(8,'Rua H','Saiu para entrega'),
+(9,'Rua I','Em preparo'),
+(10,'Rua J','Entregue'),
+(11,'Rua K','Entregue'),
+(12,'Rua L','Saiu para entrega'),
+(13,'Rua M','Em preparo'),
+(14,'Rua N','Entregue'),
+(15,'Rua O','Saiu para entrega'),
+(16,'Rua P','Entregue'),
+(17,'Rua Q','Em preparo'),
+(18,'Rua R','Entregue'),
+(19,'Rua S','Saiu para entrega'),
+(20,'Rua T','Entregue');
+
+-- =====================================
+-- RESERVAS (20)
+-- =====================================
+INSERT INTO Reservas 
+(id_cliente,id_mesa,data_reserva,hora_reserva,telefone_reserva,taxa_reserva,status,observacao)
+VALUES
+(1,1,'2026-05-01','19:00','8191',5,'Ativa','Janela'),
+(2,2,'2026-05-01','20:00','8192',0,'Cancelada',''),
+(3,3,'2026-05-02','19:30','8193',5,'Reagendada',''),
+(4,4,'2026-05-02','21:00','8194',5,'Ativa',''),
+(5,5,'2026-05-03','19:00','8195',5,'Ativa',''),
+(6,6,'2026-05-03','20:00','8196',0,'Cancelada',''),
+(7,7,'2026-05-04','19:30','8197',5,'Ativa',''),
+(8,8,'2026-05-04','21:00','8198',5,'Ativa',''),
+(9,9,'2026-05-05','19:00','8199',5,'Reagendada',''),
+(10,10,'2026-05-05','20:30','8200',5,'Ativa',''),
+(11,1,'2026-05-06','19:00','8201',5,'Ativa',''),
+(12,2,'2026-05-06','20:00','8202',0,'Cancelada',''),
+(13,3,'2026-05-07','19:30','8203',5,'Ativa',''),
+(14,4,'2026-05-07','21:00','8204',5,'Ativa',''),
+(15,5,'2026-05-08','19:00','8205',5,'Reagendada',''),
+(16,6,'2026-05-08','20:00','8206',5,'Ativa',''),
+(17,7,'2026-05-09','19:30','8207',0,'Cancelada',''),
+(18,8,'2026-05-09','21:00','8208',5,'Ativa',''),
+(19,9,'2026-05-10','19:00','8209',5,'Ativa',''),
+(20,10,'2026-05-10','20:30','8210',5,'Ativa','');
+
+USE sigep_pizzaria;
+
+-- =====================================
+-- VISUALIZAR TUDO (BÁSICO)
+-- =====================================
+SELECT * FROM Cargos;
+SELECT * FROM Funcionarios;
+SELECT * FROM Clientes;
+SELECT * FROM Mesas;
+SELECT * FROM Produtos;
+SELECT * FROM Insumos;
+SELECT * FROM Estoque;
+SELECT * FROM Pedidos;
+SELECT * FROM Itens_Pedido;
+SELECT * FROM Pagamentos;
+SELECT * FROM Entregas;
+SELECT * FROM Reservas;
+
+-- =====================================
+-- PEDIDO COMPLETO (COM ITENS E CLIENTE)
+-- =====================================
+SELECT 
+    p.id_pedido,
+    c.nome AS cliente,
+    m.numero_mesa,
+    p.tipo,
+    p.origem,
+    p.status,
+    pr.nome_produto,
+    i.quantidade,
+    i.observacao
+FROM Pedidos p
+JOIN Clientes c ON p.id_cliente = c.id_cliente
+LEFT JOIN Mesas m ON p.id_mesa = m.id_mesa
+JOIN Itens_Pedido i ON p.id_pedido = i.id_pedido
+JOIN Produtos pr ON i.id_produto = pr.id_produto
+ORDER BY p.id_pedido;
+
+-- =====================================
+-- PEDIDOS COM PAGAMENTO
+-- =====================================
+SELECT 
+    p.id_pedido,
+    c.nome AS cliente,
+    p.tipo,
+    p.status,
+    pg.tipo_pagamento,
+    pg.valor,
+    pg.status AS status_pagamento
+FROM Pedidos p
+JOIN Clientes c ON p.id_cliente = c.id_cliente
+JOIN Pagamentos pg ON p.id_pedido = pg.id_pedido;
+
+-- =====================================
+-- ENTREGAS COM CLIENTE
+-- =====================================
+SELECT 
+    e.id_entrega,
+    p.id_pedido,
+    c.nome AS cliente,
+    e.endereco_entrega,
+    e.status
+FROM Entregas e
+JOIN Pedidos p ON e.id_pedido = p.id_pedido
+JOIN Clientes c ON p.id_cliente = c.id_cliente;
+
+-- =====================================
+-- RESERVAS COM CLIENTE E MESA
+-- =====================================
+SELECT 
+    r.id_reserva,
+    c.nome AS cliente,
+    m.numero_mesa,
+    r.data_reserva,
+    r.hora_reserva,
+    r.status
+FROM Reservas r
+JOIN Clientes c ON r.id_cliente = c.id_cliente
+JOIN Mesas m ON r.id_mesa = m.id_mesa;
+
+-- =====================================
+-- ESTOQUE COM NOME DO INSUMO
+-- =====================================
+SELECT 
+    i.nome_insumo,
+    e.quantidade,
+    e.data_entrada
+FROM Estoque e
+JOIN Insumos i ON e.id_insumo = i.id_insumo;
+
+-- =====================================
+-- FUNCIONÁRIOS COM CARGO
+-- =====================================
+SELECT 
+    f.nome,
+    f.usuario,
+    c.nome_cargo,
+    f.turno
+FROM Funcionarios f
+JOIN Cargos c ON f.id_cargo = c.id_cargo;
